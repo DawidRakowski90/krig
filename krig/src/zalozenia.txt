@@ -1,0 +1,3 @@
+1. dodaj klienta
+2.dodaj auto do klienta
+3 dodaj fakture
