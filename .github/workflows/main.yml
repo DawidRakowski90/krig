@@ -61,7 +61,8 @@ jobs:
           
 
           # secrets
-          echo "$SECRETS" > GCRUN/$SERVICE/secrets.txt
+          FORMATTED_SECRETS=$(echo "$SECRETS" | tr ',' '\n')
+          echo "$FORMATTED_SECRETS" > GCRUN/$SERVICE/secrets
 
           # server.js
           cat > GCRUN/$SERVICE/server.js << EOF
