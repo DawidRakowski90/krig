@@ -27,6 +27,9 @@ jobs:
         run: |
           SERVICE="${{ inputs.service_name }}"
           ENDPOINT="${{ inputs.endpoint }}"
+          if [[ "$ENDPOINT" != /* ]]; then
+            ENDPOINT="/$ENDPOINT"
+          fi
           SECRETS="${{ inputs.secrets }}"
 
           mkdir -p GCRUN/$SERVICE
@@ -71,7 +74,7 @@ jobs:
           const app = express();
           app.use(express.json());
 
-          app.post("/$ENDPOINT", async (req, res) => {
+          app.post("$ENDPOINT", async (req, res) => {
             try {
               res.status(200).send("OK");
             } catch (err) {
