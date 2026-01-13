@@ -1,13 +1,82 @@
-name: create_service_files
+name: Create new project from template
 
 on:
   workflow_dispatch:
     inputs:
       project_name:
-        description: "Project name"
+        description: "Project folder / repo name"
         required: true
-      module:
-        description: "Main module"
+      module_name:
+        description: "Main module name"
         required: true
       port:
+        description: "App port"
         required: true
+        default: "8000"
+      database:
+        description: "Database (postgres, mysql, sqlite)"
+        required: true
+        default: "postgres"
+
+jobs:
+  scaffold:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout template repo
+        uses: actions/checkout@v4
+
+      - name: Create project structure
+        run: |
+          PROJECT=${{ inputs.project_name }}
+          MODULE=${{ inputs.module_name }}
+          PORT=${{ inputs.port }}
+          DB=${{ inputs.database }}
+
+          mkdir -p $PROJECT/src/$MODULE
+
+          # main app
+          cat > $PROJECT/src/$MODULE/main.py << EOF
+          APP_NAME = "$PROJECT"
+          MODULE = "$MODULE"
+          DATABASE = "$DB"
+
+          print("Starting $PROJECT on port $PORT using $DB")
+          EOF
+
+          # Docker compose
+          cat > $PROJECT/docker-compose.yml << EOF
+          version: "3.9"
+          services:
+            app:
+              build: .
+              ports:
+                - "$PORT:8000"
+              environment:
+                - DATABASE=$DB
+          EOF
+
+          # Readme
+          cat > $PROJECT/README.md << EOF
+          # $PROJECT
+
+          Auto-generated project.
+
+          ## Module
+          $MODULE
+
+          ## Port
+          $PORT
+
+          ## Database
+          $DB
+          EOF
+
+      - name: Commit generated project
+        run: |
+          git config user.name "GitHub Bot"
+          git config user.email "actions@github.com"
+
+          git add .
+          git commit -m "Scaffold project ${{ inputs.project_name }}"
+          git push
