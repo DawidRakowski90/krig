@@ -1,0 +1,13 @@
+name: create_service_files
+
+on:
+  workflow_dispatch:
+    inputs:
+      project_name:
+        description: "Project name"
+        required: true
+      module:
+        description: "Main module"
+        required: true
+      port:
+        required: true
