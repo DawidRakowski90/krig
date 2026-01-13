@@ -30,19 +30,6 @@ jobs:
           SECRETS="${{ inputs.secrets }}"
 
           mkdir -p GCRUN/$SERVICE
-
-          # Dockerfile
-          cat > GCRUN/$SERVICE/Dockerfile << EOF
-          FROM node:22-slim
-          WORKDIR /app
-          COPY package*.json ./
-          RUN npm ci --omit=dev
-          COPY . .
-          ENV PORT=8080
-          EXPOSE 8080
-          CMD ["node", "server.js"]
-          EOF
-
           # package.json
           cat > GCRUN/$SERVICE/package.json << EOF
           {
@@ -58,6 +45,20 @@ jobs:
             }
           }
           EOF
+          # Dockerfile
+          cat > GCRUN/$SERVICE/Dockerfile << EOF
+          FROM node:22-slim
+          WORKDIR /app/$SERVICE
+          COPY GCRun/$SERVICE/package*.json ./
+          RUN npm ci --omit=dev
+          COPY GCRun/$SERVICE ./
+          COPY GCRun/libs ./libs
+          ENV PORT=8080
+          EXPOSE 8080
+          CMD ["node", "server.js"]
+          EOF
+
+          
 
           # secrets
           echo "$SECRETS" > GCRUN/$SERVICE/secrets.txt
