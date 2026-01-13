@@ -1,82 +1,105 @@
 name: Create new project from template
 
+permissions:
+  contents: write
+
 on:
   workflow_dispatch:
     inputs:
-      project_name:
-        description: "Project folder / repo name"
+      service_name:
+        description: "Service Name"
         required: true
-      module_name:
-        description: "Main module name"
+      endpoint:
+        description: "Main endpoint (e.g. /test)"
         required: true
-      port:
-        description: "App port"
+      secrets:
+        description: "Secrets ',' separated"
         required: true
-        default: "8000"
-      database:
-        description: "Database (postgres, mysql, sqlite)"
-        required: true
-        default: "postgres"
 
 jobs:
   scaffold:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout template repo
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Create project structure
+      - name: Generate service
         run: |
-          PROJECT=${{ inputs.project_name }}
-          MODULE=${{ inputs.module_name }}
-          PORT=${{ inputs.port }}
-          DB=${{ inputs.database }}
+          SERVICE="${{ inputs.service_name }}"
+          ENDPOINT="${{ inputs.endpoint }}"
+          SECRETS="${{ inputs.secrets }}"
 
-          mkdir -p $PROJECT/src/$MODULE
+          mkdir -p GCRUN/$SERVICE
 
-          # main app
-          cat > $PROJECT/src/$MODULE/main.py << EOF
-          APP_NAME = "$PROJECT"
-          MODULE = "$MODULE"
-          DATABASE = "$DB"
-
-          print("Starting $PROJECT on port $PORT using $DB")
+          # Dockerfile
+          cat > GCRUN/$SERVICE/Dockerfile << EOF
+          FROM node:22-slim
+          WORKDIR /app
+          COPY package*.json ./
+          RUN npm ci --omit=dev
+          COPY . .
+          ENV PORT=8080
+          EXPOSE 8080
+          CMD ["node", "server.js"]
           EOF
 
-          # Docker compose
-          cat > $PROJECT/docker-compose.yml << EOF
-          version: "3.9"
-          services:
-            app:
-              build: .
-              ports:
-                - "$PORT:8000"
-              environment:
-                - DATABASE=$DB
+          # package.json
+          cat > GCRUN/$SERVICE/package.json << EOF
+          {
+            "name": "$SERVICE",
+            "version": "1.0.0",
+            "type": "module",
+            "main": "server.js",
+            "scripts": {
+              "start": "node server.js"
+            },
+            "dependencies": {
+              "express": "^5.1.0"
+            }
+          }
           EOF
 
-          # Readme
-          cat > $PROJECT/README.md << EOF
-          # $PROJECT
+          # secrets
+          echo "$SECRETS" > GCRUN/$SERVICE/secrets.txt
 
-          Auto-generated project.
+          # server.js
+          cat > GCRUN/$SERVICE/server.js << EOF
+          import express from "express";
 
-          ## Module
-          $MODULE
+          const app = express();
+          app.use(express.json());
 
-          ## Port
-          $PORT
+          app.post("$ENDPOINT", async (req, res) => {
+            try {
+              res.status(200).send("OK");
+            } catch (err) {
+              res.status(500).send(err.message);
+            }
+          });
 
-          ## Database
-          $DB
+          app.listen(process.env.PORT || 8080, () => {
+            console.log("Service $SERVICE running");
+          });
           EOF
 
-      - name: Commit generated project
+          # README
+          cat > GCRUN/$SERVICE/README.md << EOF
+          # $SERVICE
+
+          Auto-generated Cloud Run service.
+
+          ## Endpoint
+          $ENDPOINT
+
+          ## Secrets
+          $SECRETS
+          EOF
+
+      - name: Commit
         run: |
-          git config user.name "GitHub Bot"
+          git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
 
           git add .
-          git commit -m "Scaffold project ${{ inputs.project_name }}"
+          git commit -m "Scaffold ${{ inputs.service_name }}"
           git push
