@@ -1,4 +1,4 @@
-name: Create new project from template
+name: Create GCRun microservice files.
 
 permissions:
   contents: write
